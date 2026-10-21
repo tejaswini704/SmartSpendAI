@@ -1,0 +1,588 @@
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>SmartSpend AI | Indian Expense Tracker</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <span class="brand-icon">₹</span>
+
+            <div>
+                <strong>SmartSpend</strong>
+                <small>AI MONEY TRACKER</small>
+            </div>
+        </div>
+
+        <div class="nav-label">WORKSPACE</div>
+
+        <a class="nav-link active" th:href="@{/}">
+            <span>▦</span> Dashboard
+        </a>
+
+        <a class="nav-link" href="#transactions">
+            <span>↔</span> Transactions
+        </a>
+
+        <a class="nav-link" href="#prediction">
+            <span>◷</span> Expense prediction
+        </a>
+
+        <div class="sidebar-note">
+            <span class="spark">✦</span>
+            <strong>Spend smarter.</strong>
+            <p>Understand your money. Plan your future.</p>
+        </div>
+
+        <div class="sidebar-footer">
+            Made for India 🇮🇳
+            <br>
+            <small>Currency: INR (₹)</small>
+        </div>
+
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <!-- HEADER -->
+        <header class="topbar">
+
+            <div>
+                <div class="eyebrow">PERSONAL FINANCE</div>
+                <h1>Your money, clearly.</h1>
+                <p class="muted">
+                    A simple view of your financial health.
+                </p>
+            </div>
+
+            <div class="date-chip" th:text="${currentMonth}">
+                2026-10
+            </div>
+
+        </header>
+
+        <!-- SUCCESS AND ERROR MESSAGES -->
+        <div
+            th:if="${success}"
+            class="alert alert-success"
+            role="alert"
+            th:text="${success}">
+        </div>
+
+        <div
+            th:if="${error}"
+            class="alert alert-warning"
+            role="alert"
+            th:text="${error}">
+        </div>
+
+        <!-- FINANCIAL SUMMARY CARDS -->
+        <section class="stats-grid">
+
+            <div class="stat-card">
+
+                <div class="stat-top">
+                    <span>Total income</span>
+                    <span class="stat-icon green">↗</span>
+                </div>
+
+                <div
+                    class="stat-value"
+                    th:text="${@currencyUtil.format(income)}">
+                    ₹0.00
+                </div>
+
+                <div class="stat-caption">This month</div>
+
+            </div>
+
+            <div class="stat-card">
+
+                <div class="stat-top">
+                    <span>Total expenses</span>
+                    <span class="stat-icon red">↘</span>
+                </div>
+
+                <div
+                    class="stat-value"
+                    th:text="${@currencyUtil.format(expenses)}">
+                    ₹0.00
+                </div>
+
+                <div class="stat-caption">This month</div>
+
+            </div>
+
+            <div class="stat-card">
+
+                <div class="stat-top">
+                    <span>Net balance</span>
+                    <span class="stat-icon purple">₹</span>
+                </div>
+
+                <div
+                    class="stat-value"
+                    th:text="${@currencyUtil.format(balance)}">
+                    ₹0.00
+                </div>
+
+                <div class="stat-caption">
+                    Income minus expenses
+                </div>
+
+            </div>
+
+            <div class="stat-card prediction-card">
+
+                <div class="stat-top">
+                    <span>Next-month estimate</span>
+                    <span class="stat-icon amber">✦</span>
+                </div>
+
+                <div
+                    class="stat-value"
+                    th:text="${@currencyUtil.format(prediction)}">
+                    ₹0.00
+                </div>
+
+                <div class="stat-caption">
+                    Trend-based estimate
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- CHART AND ADD TRANSACTION FORM -->
+        <section class="content-grid">
+
+            <!-- CATEGORY CHART -->
+            <div class="panel chart-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+                        <h2>Spending by category</h2>
+                        <p>Based on recorded expenses</p>
+                    </div>
+
+                    <span class="panel-tag">ANALYTICS</span>
+
+                </div>
+
+                <div class="chart-wrap">
+
+                    <canvas id="categoryChart"></canvas>
+
+                    <div
+                        id="emptyChart"
+                        class="empty-chart"
+                        hidden>
+                        Add expenses to see your spending breakdown.
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ADD TRANSACTION -->
+            <div class="panel add-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+                        <h2>Add transaction</h2>
+                        <p>Record money coming in or going out</p>
+                    </div>
+
+                </div>
+
+                <form
+                    th:action="@{/transactions}"
+                    th:object="${transactionForm}"
+                    method="post"
+                    class="transaction-form">
+
+                    <!-- TRANSACTION TYPE -->
+                    <label for="type">Transaction type</label>
+
+                    <select
+                        id="type"
+                        th:field="*{type}"
+                        class="form-select"
+                        required>
+
+                        <option value="EXPENSE">Expense</option>
+                        <option value="INCOME">Income</option>
+
+                    </select>
+
+                    <!-- AMOUNT -->
+                    <label for="amount">Amount (₹)</label>
+
+                    <input
+                        id="amount"
+                        th:field="*{amount}"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        class="form-control"
+                        placeholder="e.g. 450.00"
+                        required>
+
+                    <!-- CATEGORY -->
+                    <label for="category">Category</label>
+
+                    <select
+                        id="category"
+                        th:field="*{category}"
+                        class="form-select"
+                        required>
+
+                        <option value="">Choose category</option>
+                        <option value="Food &amp; groceries">Food &amp; groceries</option>
+                        <option value="Travel">Travel</option>
+                        <option value="Rent">Rent</option>
+                        <option value="Education">Education</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Mobile &amp; internet">Mobile &amp; internet</option>
+                        <option value="Medical">Medical</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="EMI &amp; loans">EMI &amp; loans</option>
+                        <option value="Salary">Salary</option>
+                        <option value="Freelance">Freelance</option>
+                        <option value="Other">Other</option>
+
+                    </select>
+
+                    <!-- DATE -->
+                    <label for="transactionDate">Date</label>
+
+                    <input
+                        id="transactionDate"
+                        th:field="*{transactionDate}"
+                        type="date"
+                        class="form-control"
+                        required>
+
+                    <!-- PAYMENT METHOD -->
+                    <label for="paymentMethod">Payment method</label>
+
+                    <select
+                        id="paymentMethod"
+                        th:field="*{paymentMethod}"
+                        class="form-select">
+
+                        <option value="UPI">UPI</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Debit card">Debit card</option>
+                        <option value="Credit card">Credit card</option>
+                        <option value="Net banking">Net banking</option>
+                        <option value="Other">Other</option>
+
+                    </select>
+
+                    <!-- DESCRIPTION -->
+                    <label for="description">
+                        Description
+                        <span class="optional">(optional)</span>
+                    </label>
+
+                    <input
+                        id="description"
+                        th:field="*{description}"
+                        class="form-control"
+                        maxlength="250"
+                        placeholder="What was it for?">
+
+                    <!-- SUBMIT -->
+                    <button
+                        class="btn btn-primary w-100 mt-2"
+                        type="submit">
+                        ＋ Save transaction
+                    </button>
+
+                </form>
+
+            </div>
+
+        </section>
+
+        <!-- EXPENSE PREDICTION -->
+        <section
+            class="panel prediction-panel"
+            id="prediction">
+
+            <div class="prediction-symbol">✦</div>
+
+            <div class="prediction-copy">
+
+                <div class="eyebrow">SMART INSIGHT</div>
+
+                <h2>Your next-month expense estimate</h2>
+
+                <p>
+                    Uses a simple linear trend over recent monthly
+                    expense totals. It is an estimate, not a guarantee;
+                    accuracy improves with consistent transaction history.
+                </p>
+
+            </div>
+
+            <div
+                class="prediction-number"
+                th:text="${@currencyUtil.format(prediction)}">
+                ₹0.00
+            </div>
+
+        </section>
+
+        <!-- TRANSACTION HISTORY -->
+        <section
+            class="panel transactions-panel"
+            id="transactions">
+
+            <div class="panel-heading">
+
+                <div>
+                    <h2>Recent transactions</h2>
+                    <p>Your latest recorded income and expenses</p>
+                </div>
+
+                <span
+                    class="panel-tag"
+                    th:text="${transactions.size() + ' RECORDS'}">
+                    0 RECORDS
+                </span>
+
+            </div>
+
+            <div class="table-responsive">
+
+                <table class="table align-middle">
+
+                    <thead>
+                        <tr>
+                            <th>TRANSACTION</th>
+                            <th>DATE</th>
+                            <th>PAYMENT</th>
+                            <th>TYPE</th>
+                            <th class="text-end">AMOUNT</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <!-- EMPTY STATE -->
+                        <tr th:if="${transactions.isEmpty()}">
+
+                            <td colspan="6" class="empty-row">
+                                No transactions yet.
+                                Add your first transaction above.
+                            </td>
+
+                        </tr>
+
+                        <!-- TRANSACTION ROWS -->
+                        <tr th:each="t : ${transactions}">
+
+                            <td>
+
+                                <div
+                                    class="transaction-name"
+                                    th:text="${t.category}">
+                                    Food
+                                </div>
+
+                                <div
+                                    class="transaction-description"
+                                    th:text="${t.description != null && !t.description.isBlank() ? t.description : 'No description'}">
+                                    Description
+                                </div>
+
+                            </td>
+
+                            <td
+                                th:text="${#temporals.format(t.transactionDate, 'dd MMM yyyy')}">
+                                21 Oct 2026
+                            </td>
+
+                            <td th:text="${t.paymentMethod}">
+                                UPI
+                            </td>
+
+                            <td>
+
+                                <span
+                                    class="type-pill"
+                                    th:classappend="${t.type.name() == 'INCOME' ? ' type-income' : ' type-expense'}"
+                                    th:text="${t.type}">
+                                    EXPENSE
+                                </span>
+
+                            </td>
+
+                            <td
+                                class="text-end amount-cell"
+                                th:classappend="${t.type.name() == 'INCOME' ? ' amount-income' : ''}"
+                                th:text="${(t.type.name() == 'INCOME' ? '+' : '−') + @currencyUtil.format(t.amount)}">
+                                −₹450.00
+                            </td>
+
+                            <td class="text-end">
+
+                                <form
+                                    th:action="@{/transactions/{id}/delete(id=${t.id})}"
+                                    method="post"
+                                    onsubmit="return confirm('Delete this transaction?')">
+
+                                    <button
+                                        class="delete-btn"
+                                        type="submit"
+                                        aria-label="Delete transaction">
+                                        ×
+                                    </button>
+
+                                </form>
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="page-footer">
+            SmartSpend AI · Personal finance, made clearer
+            · Amounts in Indian Rupees (INR)
+        </footer>
+
+    </main>
+
+</div>
+
+<!-- CATEGORY CHART SCRIPT -->
+<script th:inline="javascript">
+
+    const labels = /*[[${expenseLabels}]]*/ [];
+    const values = /*[[${expenseValues}]]*/ [];
+
+    const canvas = document.getElementById("categoryChart");
+    const emptyChart = document.getElementById("emptyChart");
+
+    if (!labels || labels.length === 0) {
+
+        canvas.hidden = true;
+        emptyChart.hidden = false;
+
+    } else {
+
+        new Chart(canvas, {
+
+            type: "doughnut",
+
+            data: {
+
+                labels: labels,
+
+                datasets: [{
+
+                    data: values,
+
+                    backgroundColor: [
+                        "#7c6cf2",
+                        "#42c6a5",
+                        "#f5b84b",
+                        "#ef7185",
+                        "#54a6f5",
+                        "#a78bfa",
+                        "#fb923c",
+                        "#6b7280"
+                    ],
+
+                    borderWidth: 0,
+                    hoverOffset: 7
+
+                }]
+
+            },
+
+            options: {
+
+                responsive: true,
+                maintainAspectRatio: false,
+
+                cutout: "68%",
+
+                plugins: {
+
+                    legend: {
+
+                        position: "bottom",
+
+                        labels: {
+                            usePointStyle: true,
+                            padding: 18
+                        }
+
+                    },
+
+                    tooltip: {
+
+                        callbacks: {
+
+                            label: function (context) {
+
+                                const amount = Number(context.raw)
+                                    .toLocaleString("en-IN", {
+                                        maximumFractionDigits: 2
+                                    });
+
+                                return context.label + ": ₹" + amount;
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        });
+
+    }
+
+</script>
+
+</body>
+</html>
